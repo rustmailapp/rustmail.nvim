@@ -13,8 +13,8 @@
 ## Requirements
 
 - Neovim >= 0.10
-- `curl` on PATH
 - [`rustmail`](https://github.com/rustmailapp/rustmail) binary on PATH (or specify path in config)
+- `curl` on PATH (only needed when `auto_start = true`)
 
 ## Install
 
@@ -48,12 +48,13 @@ require("rustmail").setup({
   smtp_port = 1025,
   auto_start = false,
   binary = "rustmail",
-  poll_interval = 2000,
+  layout = "float",
   float = {
-    width = 0.8,
-    height = 0.8,
+    width = 0.9,
+    height = 0.9,
     border = "rounded",
   },
+  toggle_keymap = "<leader>rm",
 })
 ```
 
@@ -63,9 +64,9 @@ All options and their defaults: `:help rustmail-config`
 
 | Command              | Description                                |
 |----------------------|--------------------------------------------|
-| `:Rustmail`          | Open the message list                      |
-| `:Rustmail toggle`   | Toggle the message list                    |
-| `:Rustmail close`    | Close all rustmail windows and stop polling |
+| `:Rustmail`          | Open the TUI                               |
+| `:Rustmail toggle`   | Toggle the TUI window                      |
+| `:Rustmail close`    | Close the TUI window                       |
 | `:Rustmail stop`     | Stop the auto-started daemon               |
 
 ### Keymaps

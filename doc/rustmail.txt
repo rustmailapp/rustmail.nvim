@@ -15,16 +15,16 @@ CONTENTS                                                    *rustmail-contents*
 1. INTRODUCTION                                                *rustmail-intro*
 
 rustmail.nvim is a Neovim client for rustmail, a lightweight development email
-server. It connects to a running rustmail instance via its REST API, providing
-a floating-window UI for browsing captured emails. New messages are detected
-automatically via background polling.
+server. It embeds the rustmail TUI in a Neovim terminal buffer, displayed in a
+floating window or tab. The plugin can optionally auto-start the rustmail
+daemon if one is not already running.
 
 ==============================================================================
 2. REQUIREMENTS                                         *rustmail-requirements*
 
 - Neovim >= 0.10
-- `curl` on PATH (used for HTTP requests)
 - `rustmail` binary on PATH (or specify path in config)
+- `curl` on PATH (only needed when `auto_start = true`)
 
 ==============================================================================
 3. INSTALLATION                                         *rustmail-installation*
@@ -57,16 +57,13 @@ Call `require("rustmail").setup(opts)` with any of these options:
     smtp_port = 1025,          -- rustmail SMTP port (for auto_start)
     auto_start = false,        -- start rustmail daemon if not running
     binary = "rustmail",       -- path to rustmail binary
-    poll_interval = 2000,      -- polling interval in ms for new messages
+    layout = "float",          -- "float" or "tab"
     float = {
-      width = 0.8,             -- fraction of editor width
-      height = 0.8,            -- fraction of editor height
+      width = 0.9,             -- fraction of editor width
+      height = 0.9,            -- fraction of editor height
       border = "rounded",      -- border style
     },
-    keymaps = {                -- see |rustmail-keymaps|
-      list = { ... },
-      detail = { ... },
-    },
+    toggle_keymap = "<leader>rm",  -- keymap to toggle TUI, set to false to disable
   })
 <
 
@@ -76,17 +73,16 @@ Call `require("rustmail").setup(opts)` with any of these options:
 :Rustmail [subcommand]                                           *:Rustmail*
 
   Subcommands:
-    open     Open the message list (default)
-    close    Close all rustmail windows and stop polling
-    toggle   Toggle the message list
+    open     Open the TUI (default)
+    close    Close the TUI window
+    toggle   Toggle the TUI window
     stop     Stop the auto-started daemon
 
 ==============================================================================
 6. KEYMAPS                                                 *rustmail-keymaps*
 
-All keymaps are buffer-local and configurable via |rustmail-config|.
-
-Note: `dd` shadows Vim's built-in delete-line in rustmail buffers.
+Keymaps inside the TUI are handled by the `rustmail tui` binary, not
+by this plugin. The following is a reference for the built-in TUI keymaps:
 
 Message List~
   <CR>     Open selected message
@@ -108,14 +104,17 @@ Message Detail~
   gA       View authentication results (DKIM/SPF/DMARC)
   q        Close
 
+Plugin keymap~
+  <leader>rm   Toggle TUI (configurable via `toggle_keymap`)
+
 ==============================================================================
 7. API                                                         *rustmail-api*
 
 require("rustmail").setup({opts})            Configure the plugin
-require("rustmail").open()                   Open the message list
-require("rustmail").close()                  Close all windows, stop polling
-require("rustmail").toggle()                 Toggle the message list
-require("rustmail").ensure_daemon()          Start rustmail if not running
+require("rustmail").open()                   Open the TUI
+require("rustmail").close()                  Close the TUI window
+require("rustmail").toggle()                 Toggle the TUI window
+require("rustmail").ensure_daemon({cb})      Start daemon if not running
 require("rustmail").stop_daemon()            Stop auto-started daemon
 
 ==============================================================================
