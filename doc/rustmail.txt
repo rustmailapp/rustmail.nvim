@@ -31,7 +31,7 @@ automatically via background polling.
 
 lazy.nvim: >lua
   {
-    "davide/rustmail.nvim",
+    "rustmailapp/rustmail.nvim",
     cmd = "Rustmail",
     opts = {},
   }
@@ -39,7 +39,7 @@ lazy.nvim: >lua
 
 packer.nvim: >lua
   use {
-    "davide/rustmail.nvim",
+    "rustmailapp/rustmail.nvim",
     config = function()
       require("rustmail").setup()
     end,
