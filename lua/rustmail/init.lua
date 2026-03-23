@@ -1,56 +1,30 @@
 local M = {}
 
+local pid = require("rustmail.pid")
 local daemon_job = nil
-
-local function pid_file()
-  return vim.fn.stdpath("cache") .. "/rustmail.pid"
-end
-
-local function write_pid(pid)
-  local f = io.open(pid_file(), "w")
-  if f then
-    f:write(tostring(pid))
-    f:close()
-  end
-end
-
-local function read_pid()
-  local f = io.open(pid_file(), "r")
-  if not f then
-    return nil
-  end
-  local content = f:read("*a")
-  f:close()
-  local pid = tonumber(content)
-  if not pid or pid ~= math.floor(pid) or pid <= 0 then
-    return nil
-  end
-  return pid
-end
-
-local function clear_pid()
-  os.remove(pid_file())
-end
-
-local function is_pid_alive(pid)
-  if not pid then
-    return false
-  end
-  local ok = pcall(vim.uv.kill, pid, 0)
-  return ok
-end
+local prev_keymap = nil
+local augroup = vim.api.nvim_create_augroup("rustmail", { clear = true })
 
 function M.setup(opts)
   require("rustmail.config").setup(opts)
 
+  vim.api.nvim_clear_autocmds({ group = augroup })
+
+  if prev_keymap then
+    pcall(vim.keymap.del, "n", prev_keymap)
+    prev_keymap = nil
+  end
+
   local cfg = require("rustmail.config").options
   if cfg.toggle_keymap then
+    prev_keymap = cfg.toggle_keymap
     vim.keymap.set("n", cfg.toggle_keymap, function()
       M.toggle()
     end, { desc = "Toggle Rustmail TUI" })
   end
 
   vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = augroup,
     callback = function()
       M.stop_daemon()
     end,
@@ -88,9 +62,28 @@ function M.ensure_daemon(on_ready)
     return
   end
 
-  local stale_pid = read_pid()
-  if stale_pid and not is_pid_alive(stale_pid) then
-    clear_pid()
+  local stale_pid = pid.read()
+  if stale_pid then
+    if pid.is_rustmail(stale_pid) then
+      pid.clear()
+      vim.fn.jobstart({ "kill", tostring(stale_pid) }, {
+        on_exit = function(_, code)
+          vim.schedule(function()
+            if code == 0 then
+              M.ensure_daemon(on_ready)
+            else
+              vim.notify("[rustmail] failed to kill stale daemon (pid " .. stale_pid .. ")", vim.log.levels.WARN)
+            end
+          end)
+        end,
+      })
+      return
+    else
+      if pid.is_alive(stale_pid) then
+        vim.notify("[rustmail] pid " .. stale_pid .. " is not a rustmail process, ignoring", vim.log.levels.WARN)
+      end
+      pid.clear()
+    end
   end
 
   local cfg = require("rustmail.config").options
@@ -122,12 +115,12 @@ function M.ensure_daemon(on_ready)
           detach = true,
           on_exit = function()
             daemon_job = nil
-            clear_pid()
+            pid.clear()
           end,
         })
 
         if daemon_job > 0 then
-          write_pid(vim.fn.jobpid(daemon_job))
+          pid.write(vim.fn.jobpid(daemon_job))
           vim.notify("[rustmail] started daemon on :" .. cfg.port, vim.log.levels.INFO)
           if on_ready then
             local attempts = 0
@@ -147,6 +140,8 @@ function M.ensure_daemon(on_ready)
                       on_ready()
                     elseif attempts < max_attempts then
                       vim.defer_fn(poll, 250)
+                    else
+                      vim.notify("[rustmail] daemon failed to become ready", vim.log.levels.WARN)
                     end
                   end)
                 end,
@@ -154,6 +149,8 @@ function M.ensure_daemon(on_ready)
             end
             vim.defer_fn(poll, 250)
           end
+        else
+          vim.notify("[rustmail] failed to start daemon", vim.log.levels.ERROR)
         end
       end)
     end,
@@ -168,16 +165,16 @@ function M.stop_daemon()
   if daemon_job then
     vim.fn.jobstop(daemon_job)
     daemon_job = nil
-    clear_pid()
+    pid.clear()
     vim.notify("[rustmail] daemon stopped", vim.log.levels.INFO)
     return
   end
 
-  local orphan_pid = read_pid()
-  if orphan_pid and is_pid_alive(orphan_pid) then
+  local orphan_pid = pid.read()
+  if orphan_pid and pid.is_rustmail(orphan_pid) then
     vim.fn.jobstart({ "kill", tostring(orphan_pid) }, {
       on_exit = function()
-        clear_pid()
+        pid.clear()
       end,
     })
     vim.notify("[rustmail] stopped orphaned daemon (pid " .. orphan_pid .. ")", vim.log.levels.INFO)
