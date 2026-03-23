@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          PREV=$(git tag --sort=-v:refname -l 'v*' | sed -n '2p')
+          if [ -z "$PREV" ]; then
+            PREV=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "tag=$PREV" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV="${{ steps.prev_tag.outputs.tag }}"
+          CURRENT="${{ github.ref_name }}"
+
+          BODY=""
+
+          FEATS=$(git log "$PREV".."$CURRENT" --pretty=format:"%s" | grep -E "^feat(\(.+\))?:" | sed -E 's/^feat(\([^)]*\))?: //' || true)
+          if [ -n "$FEATS" ]; then
+            BODY="${BODY}## New Features\n"
+            while IFS= read -r line; do
+              BODY="${BODY}- ${line}\n"
+            done <<< "$FEATS"
+            BODY="${BODY}\n"
+          fi
+
+          FIXES=$(git log "$PREV".."$CURRENT" --pretty=format:"%s" | grep -E "^fix(\(.+\))?:" | sed -E 's/^fix(\([^)]*\))?: //' || true)
+          if [ -n "$FIXES" ]; then
+            BODY="${BODY}## Bug Fixes\n"
+            while IFS= read -r line; do
+              BODY="${BODY}- ${line}\n"
+            done <<< "$FIXES"
+            BODY="${BODY}\n"
+          fi
+
+          PERF=$(git log "$PREV".."$CURRENT" --pretty=format:"%s" | grep -E "^perf(\(.+\))?:" | sed -E 's/^perf(\([^)]*\))?: //' || true)
+          if [ -n "$PERF" ]; then
+            BODY="${BODY}## Performance\n"
+            while IFS= read -r line; do
+              BODY="${BODY}- ${line}\n"
+            done <<< "$PERF"
+            BODY="${BODY}\n"
+          fi
+
+          CHORES=$(git log "$PREV".."$CURRENT" --pretty=format:"%s" | grep -E "^(chore|refactor|style|ci|docs|build)(\(.+\))?:" | sed -E 's/^[a-z]+(\([^)]*\))?: //' || true)
+          if [ -n "$CHORES" ]; then
+            BODY="${BODY}## Other Changes\n"
+            while IFS= read -r line; do
+              BODY="${BODY}- ${line}\n"
+            done <<< "$CHORES"
+            BODY="${BODY}\n"
+          fi
+
+          if [ -z "$BODY" ]; then
+            BODY="No categorized changes in this release."
+          fi
+
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo -e "$BODY"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write release notes
+        env:
+          RELEASE_BODY: ${{ steps.changelog.outputs.body }}
+        run: printenv RELEASE_BODY > /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md
