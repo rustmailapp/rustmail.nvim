@@ -1,4 +1,6 @@
-if vim.g.loaded_rustmail then return end
+if vim.g.loaded_rustmail then
+  return
+end
 vim.g.loaded_rustmail = true
 
 vim.api.nvim_create_user_command("Rustmail", function(cmd)
