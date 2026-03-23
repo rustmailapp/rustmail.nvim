@@ -1,0 +1,122 @@
+*rustmail.txt*  Neovim client for rustmail
+
+==============================================================================
+CONTENTS                                                    *rustmail-contents*
+
+  1. Introduction ......................................... |rustmail-intro|
+  2. Requirements ........................................ |rustmail-requirements|
+  3. Installation ........................................ |rustmail-installation|
+  4. Configuration ....................................... |rustmail-config|
+  5. Commands ............................................ |rustmail-commands|
+  6. Keymaps ............................................. |rustmail-keymaps|
+  7. API ................................................. |rustmail-api|
+
+==============================================================================
+1. INTRODUCTION                                                *rustmail-intro*
+
+rustmail.nvim is a Neovim client for rustmail, a lightweight development email
+server. It connects to a running rustmail instance via its REST API, providing
+a floating-window UI for browsing captured emails. New messages are detected
+automatically via background polling.
+
+==============================================================================
+2. REQUIREMENTS                                         *rustmail-requirements*
+
+- Neovim >= 0.10
+- `curl` on PATH (used for HTTP requests)
+- `rustmail` binary on PATH (or specify path in config)
+
+==============================================================================
+3. INSTALLATION                                         *rustmail-installation*
+
+lazy.nvim: >lua
+  {
+    "davide/rustmail.nvim",
+    cmd = "Rustmail",
+    opts = {},
+  }
+<
+
+packer.nvim: >lua
+  use {
+    "davide/rustmail.nvim",
+    config = function()
+      require("rustmail").setup()
+    end,
+  }
+<
+
+==============================================================================
+4. CONFIGURATION                                           *rustmail-config*
+
+Call `require("rustmail").setup(opts)` with any of these options:
+>lua
+  require("rustmail").setup({
+    host = "127.0.0.1",        -- rustmail server host
+    port = 8025,               -- rustmail HTTP port
+    smtp_port = 1025,          -- rustmail SMTP port (for auto_start)
+    auto_start = false,        -- start rustmail daemon if not running
+    binary = "rustmail",       -- path to rustmail binary
+    poll_interval = 2000,      -- polling interval in ms for new messages
+    float = {
+      width = 0.8,             -- fraction of editor width
+      height = 0.8,            -- fraction of editor height
+      border = "rounded",      -- border style
+    },
+    keymaps = {                -- see |rustmail-keymaps|
+      list = { ... },
+      detail = { ... },
+    },
+  })
+<
+
+==============================================================================
+5. COMMANDS                                               *rustmail-commands*
+
+:Rustmail [subcommand]                                           *:Rustmail*
+
+  Subcommands:
+    open     Open the message list (default)
+    close    Close all rustmail windows and stop polling
+    toggle   Toggle the message list
+    stop     Stop the auto-started daemon
+
+==============================================================================
+6. KEYMAPS                                                 *rustmail-keymaps*
+
+All keymaps are buffer-local and configurable via |rustmail-config|.
+
+Note: `dd` shadows Vim's built-in delete-line in rustmail buffers.
+
+Message List~
+  <CR>     Open selected message
+  dd       Delete selected message
+  mr       Toggle read/unread
+  ms       Toggle starred
+  R        Refresh list
+  /        Search messages (empty input clears search)
+  D        Delete ALL messages (with confirmation)
+  q        Close
+
+Message Detail~
+  <BS>     Back to list
+  dd       Delete message
+  mr       Toggle read/unread
+  ms       Toggle starred
+  gR       View raw message (RFC 5322)
+  ga       View attachments
+  gA       View authentication results (DKIM/SPF/DMARC)
+  q        Close
+
+==============================================================================
+7. API                                                         *rustmail-api*
+
+require("rustmail").setup({opts})            Configure the plugin
+require("rustmail").open()                   Open the message list
+require("rustmail").close()                  Close all windows, stop polling
+require("rustmail").toggle()                 Toggle the message list
+require("rustmail").ensure_daemon()          Start rustmail if not running
+require("rustmail").stop_daemon()            Stop auto-started daemon
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
