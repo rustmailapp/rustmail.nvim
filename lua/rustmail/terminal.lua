@@ -64,13 +64,13 @@ local function start_terminal()
   })
 end
 
-local function float_dims()
+function M._float_dims()
   local cfg = require("rustmail.config").options.float
   local ew = vim.o.columns
   local eh = vim.o.lines - vim.o.cmdheight - 1
 
-  local w = math.floor(ew * cfg.width)
-  local h = math.floor(eh * cfg.height)
+  local w = math.max(1, math.floor(ew * cfg.width))
+  local h = math.max(1, math.floor(eh * cfg.height))
   local col = math.floor((ew - w) / 2)
   local row = math.floor((eh - h) / 2)
 
@@ -92,7 +92,7 @@ local function attach_win_autocmd()
 end
 
 function M.open_float(buf)
-  local dims = float_dims()
+  local dims = M._float_dims()
   local cfg = require("rustmail.config").options.float
 
   state.win = vim.api.nvim_open_win(buf, true, {
@@ -143,14 +143,6 @@ function M.close()
   if win_valid() then
     vim.api.nvim_win_close(state.win, true)
     state.win = nil
-  end
-end
-
-function M.toggle()
-  if win_valid() then
-    M.close()
-  else
-    M.open()
   end
 end
 
