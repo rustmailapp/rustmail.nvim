@@ -36,13 +36,8 @@ local function is_pid_alive(pid)
   if not pid then
     return false
   end
-  local handle = io.popen("kill -0 " .. tostring(pid) .. " 2>/dev/null; echo $?")
-  if not handle then
-    return false
-  end
-  local result = handle:read("*a")
-  handle:close()
-  return vim.trim(result) == "0"
+  local ok = pcall(vim.uv.kill, pid, 0)
+  return ok
 end
 
 function M.setup(opts)
@@ -54,6 +49,12 @@ function M.setup(opts)
       M.toggle()
     end, { desc = "Toggle Rustmail TUI" })
   end
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      M.stop_daemon()
+    end,
+  })
 end
 
 function M.open()
@@ -72,7 +73,11 @@ function M.close()
 end
 
 function M.toggle()
-  require("rustmail.terminal").toggle()
+  if require("rustmail.terminal").is_open() then
+    M.close()
+  else
+    M.open()
+  end
 end
 
 function M.ensure_daemon(on_ready)
@@ -124,11 +129,31 @@ function M.ensure_daemon(on_ready)
         if daemon_job > 0 then
           write_pid(vim.fn.jobpid(daemon_job))
           vim.notify("[rustmail] started daemon on :" .. cfg.port, vim.log.levels.INFO)
-          vim.defer_fn(function()
-            if on_ready then
-              on_ready()
+          if on_ready then
+            local attempts = 0
+            local max_attempts = 20
+            local function poll()
+              attempts = attempts + 1
+              vim.fn.jobstart({
+                "curl",
+                "-sf",
+                "--max-time",
+                "1",
+                "http://" .. cfg.host .. ":" .. cfg.port .. "/api/v1/messages?limit=1",
+              }, {
+                on_exit = function(_, poll_code)
+                  vim.schedule(function()
+                    if poll_code == 0 then
+                      on_ready()
+                    elseif attempts < max_attempts then
+                      vim.defer_fn(poll, 250)
+                    end
+                  end)
+                end,
+              })
             end
-          end, 1000)
+            vim.defer_fn(poll, 250)
+          end
         end
       end)
     end,

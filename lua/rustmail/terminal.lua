@@ -38,7 +38,14 @@ local function create_buf()
   state.buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("filetype", "rustmail", { buf = state.buf })
 
-  vim.api.nvim_set_current_buf(state.buf)
+  return state.buf
+end
+
+local function start_terminal()
+  if state.chan then
+    return
+  end
+
   state.chan = vim.fn.jobstart(build_cmd(), {
     term = true,
     on_exit = function()
@@ -48,12 +55,13 @@ local function create_buf()
           vim.api.nvim_win_close(state.win, true)
         end
         state.win = nil
+        if buf_valid() then
+          vim.api.nvim_buf_delete(state.buf, { force = true })
+        end
         state.buf = nil
       end)
     end,
   })
-
-  return state.buf
 end
 
 local function float_dims()
@@ -127,6 +135,7 @@ function M.open()
     M.open_float(buf)
   end
 
+  start_terminal()
   vim.cmd("startinsert")
 end
 
