@@ -3,6 +3,7 @@ local M = {}
 local pid = require("rustmail.pid")
 local daemon_job = nil
 local daemon_ready = false
+local daemon_starting = false
 local pending_callbacks = {}
 local prev_keymap = nil
 local augroup = vim.api.nvim_create_augroup("rustmail", { clear = true })
@@ -57,7 +58,7 @@ function M.toggle()
 end
 
 function M.ensure_daemon(on_ready)
-  if daemon_job then
+  if daemon_job or daemon_starting then
     if on_ready then
       if daemon_ready then
         on_ready()
@@ -68,6 +69,8 @@ function M.ensure_daemon(on_ready)
     return
   end
 
+  daemon_starting = true
+
   local stale_pid = pid.read()
   if stale_pid then
     if pid.is_rustmail(stale_pid) then
@@ -76,8 +79,10 @@ function M.ensure_daemon(on_ready)
           vim.schedule(function()
             if code == 0 then
               pid.clear()
+              daemon_starting = false
               M.ensure_daemon(on_ready)
             else
+              daemon_starting = false
               vim.notify("[rustmail] failed to kill stale daemon (pid " .. stale_pid .. ")", vim.log.levels.WARN)
             end
           end)
@@ -104,6 +109,7 @@ function M.ensure_daemon(on_ready)
     on_exit = function(_, code)
       vim.schedule(function()
         if code == 0 then
+          daemon_starting = false
           if on_ready then
             on_ready()
           end
@@ -126,6 +132,8 @@ function M.ensure_daemon(on_ready)
             pid.clear()
           end,
         })
+
+        daemon_starting = false
 
         if daemon_job > 0 then
           pid.write(vim.fn.jobpid(daemon_job))
@@ -157,6 +165,9 @@ function M.ensure_daemon(on_ready)
                     vim.defer_fn(poll, 250)
                   else
                     vim.notify("[rustmail] daemon failed to become ready", vim.log.levels.WARN)
+                    if daemon_job then
+                      vim.fn.jobstop(daemon_job)
+                    end
                   end
                 end)
               end,
@@ -170,8 +181,11 @@ function M.ensure_daemon(on_ready)
     end,
   })
 
-  if check <= 0 and on_ready then
-    on_ready()
+  if check <= 0 then
+    daemon_starting = false
+    if on_ready then
+      on_ready()
+    end
   end
 end
 
