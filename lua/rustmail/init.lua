@@ -2,6 +2,8 @@ local M = {}
 
 local pid = require("rustmail.pid")
 local daemon_job = nil
+local daemon_ready = false
+local pending_callbacks = {}
 local prev_keymap = nil
 local augroup = vim.api.nvim_create_augroup("rustmail", { clear = true })
 
@@ -20,7 +22,7 @@ function M.setup(opts)
     prev_keymap = cfg.toggle_keymap
     vim.keymap.set("n", cfg.toggle_keymap, function()
       M.toggle()
-    end, { desc = "Toggle Rustmail TUI" })
+    end, { desc = "Toggle RustMail TUI" })
   end
 
   vim.api.nvim_create_autocmd("VimLeavePre", {
@@ -57,7 +59,11 @@ end
 function M.ensure_daemon(on_ready)
   if daemon_job then
     if on_ready then
-      on_ready()
+      if daemon_ready then
+        on_ready()
+      else
+        table.insert(pending_callbacks, on_ready)
+      end
     end
     return
   end
@@ -65,11 +71,11 @@ function M.ensure_daemon(on_ready)
   local stale_pid = pid.read()
   if stale_pid then
     if pid.is_rustmail(stale_pid) then
-      pid.clear()
       vim.fn.jobstart({ "kill", tostring(stale_pid) }, {
         on_exit = function(_, code)
           vim.schedule(function()
             if code == 0 then
+              pid.clear()
               M.ensure_daemon(on_ready)
             else
               vim.notify("[rustmail] failed to kill stale daemon (pid " .. stale_pid .. ")", vim.log.levels.WARN)
@@ -115,6 +121,8 @@ function M.ensure_daemon(on_ready)
           detach = true,
           on_exit = function()
             daemon_job = nil
+            daemon_ready = false
+            pending_callbacks = {}
             pid.clear()
           end,
         })
@@ -123,32 +131,38 @@ function M.ensure_daemon(on_ready)
           pid.write(vim.fn.jobpid(daemon_job))
           vim.notify("[rustmail] started daemon on :" .. cfg.port, vim.log.levels.INFO)
           if on_ready then
-            local attempts = 0
-            local max_attempts = 20
-            local function poll()
-              attempts = attempts + 1
-              vim.fn.jobstart({
-                "curl",
-                "-sf",
-                "--max-time",
-                "1",
-                "http://" .. cfg.host .. ":" .. cfg.port .. "/api/v1/messages?limit=1",
-              }, {
-                on_exit = function(_, poll_code)
-                  vim.schedule(function()
-                    if poll_code == 0 then
-                      on_ready()
-                    elseif attempts < max_attempts then
-                      vim.defer_fn(poll, 250)
-                    else
-                      vim.notify("[rustmail] daemon failed to become ready", vim.log.levels.WARN)
-                    end
-                  end)
-                end,
-              })
-            end
-            vim.defer_fn(poll, 250)
+            table.insert(pending_callbacks, on_ready)
           end
+          local attempts = 0
+          local max_attempts = 20
+          local function poll()
+            attempts = attempts + 1
+            vim.fn.jobstart({
+              "curl",
+              "-sf",
+              "--max-time",
+              "1",
+              "http://" .. cfg.host .. ":" .. cfg.port .. "/api/v1/messages?limit=1",
+            }, {
+              on_exit = function(_, poll_code)
+                vim.schedule(function()
+                  if poll_code == 0 then
+                    daemon_ready = true
+                    local cbs = pending_callbacks
+                    pending_callbacks = {}
+                    for _, cb in ipairs(cbs) do
+                      cb()
+                    end
+                  elseif attempts < max_attempts then
+                    vim.defer_fn(poll, 250)
+                  else
+                    vim.notify("[rustmail] daemon failed to become ready", vim.log.levels.WARN)
+                  end
+                end)
+              end,
+            })
+          end
+          vim.defer_fn(poll, 250)
         else
           vim.notify("[rustmail] failed to start daemon", vim.log.levels.ERROR)
         end
@@ -165,6 +179,8 @@ function M.stop_daemon()
   if daemon_job then
     vim.fn.jobstop(daemon_job)
     daemon_job = nil
+    daemon_ready = false
+    pending_callbacks = {}
     pid.clear()
     vim.notify("[rustmail] daemon stopped", vim.log.levels.INFO)
     return

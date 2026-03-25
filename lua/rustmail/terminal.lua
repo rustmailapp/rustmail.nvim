@@ -46,7 +46,7 @@ local function start_terminal()
     return
   end
 
-  state.chan = vim.fn.jobstart(build_cmd(), {
+  local chan = vim.fn.jobstart(build_cmd(), {
     term = true,
     on_exit = function()
       state.chan = nil
@@ -62,6 +62,13 @@ local function start_terminal()
       end)
     end,
   })
+
+  if chan <= 0 then
+    vim.notify("[rustmail] failed to start TUI process", vim.log.levels.ERROR)
+    return
+  end
+
+  state.chan = chan
 end
 
 function M._float_dims()
@@ -103,7 +110,7 @@ function M.open_float(buf)
     row = dims.row,
     style = "minimal",
     border = cfg.border,
-    title = " Rustmail ",
+    title = " RustMail ",
     title_pos = "center",
   })
 
