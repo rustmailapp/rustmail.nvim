@@ -1,4 +1,4 @@
-describe(":Rustmail command", function()
+describe(":RustMail command", function()
   local calls
   local orig_notify
 
@@ -31,32 +31,32 @@ describe(":Rustmail command", function()
 
   after_each(function()
     vim.notify = orig_notify
-    pcall(vim.api.nvim_del_user_command, "Rustmail")
+    pcall(vim.api.nvim_del_user_command, "RustMail")
     vim.g.loaded_rustmail = nil
   end)
 
   it("calls open with no arguments", function()
-    vim.cmd("Rustmail")
+    vim.cmd("RustMail")
     assert.are.same({ "open" }, calls)
   end)
 
   it("calls open with explicit 'open' argument", function()
-    vim.cmd("Rustmail open")
+    vim.cmd("RustMail open")
     assert.are.same({ "open" }, calls)
   end)
 
   it("calls close", function()
-    vim.cmd("Rustmail close")
+    vim.cmd("RustMail close")
     assert.are.same({ "close" }, calls)
   end)
 
   it("calls toggle", function()
-    vim.cmd("Rustmail toggle")
+    vim.cmd("RustMail toggle")
     assert.are.same({ "toggle" }, calls)
   end)
 
   it("calls stop_daemon", function()
-    vim.cmd("Rustmail stop")
+    vim.cmd("RustMail stop")
     assert.are.same({ "stop_daemon" }, calls)
   end)
 
@@ -68,12 +68,12 @@ describe(":Rustmail command", function()
       end
     end
 
-    vim.cmd("Rustmail nonsense")
+    vim.cmd("RustMail nonsense")
     assert.is_true(notified)
   end)
 
   it("provides completion candidates", function()
-    local completions = vim.fn.getcompletion("Rustmail ", "cmdline")
+    local completions = vim.fn.getcompletion("RustMail ", "cmdline")
     table.sort(completions)
     assert.are.same({ "close", "open", "stop", "toggle" }, completions)
   end)

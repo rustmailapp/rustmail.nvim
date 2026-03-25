@@ -32,7 +32,10 @@ daemon if one is not already running.
 lazy.nvim: >lua
   {
     "rustmailapp/rustmail.nvim",
-    cmd = "Rustmail",
+    cmd = "RustMail",
+    keys = {
+      { "<leader>rm", "<cmd>RustMail toggle<cr>", desc = "Toggle RustMail" },
+    },
     opts = {},
   }
 <
@@ -63,14 +66,14 @@ Call `require("rustmail").setup(opts)` with any of these options:
       height = 0.9,            -- fraction of editor height
       border = "rounded",      -- border style
     },
-    toggle_keymap = "<leader>rm",  -- keymap to toggle TUI, set to false to disable
+    toggle_keymap = false,         -- keymap to toggle TUI (e.g. "<leader>rm")
   })
 <
 
 ==============================================================================
 5. COMMANDS                                               *rustmail-commands*
 
-:Rustmail [subcommand]                                           *:Rustmail*
+:RustMail [subcommand]                                           *:RustMail*
 
   Subcommands:
     open     Open the TUI (default)
@@ -105,7 +108,18 @@ Message Detail~
   q        Close
 
 Plugin keymap~
-  <leader>rm   Toggle TUI (configurable via `toggle_keymap`)
+
+No keymaps are registered by default. The recommended approach is to define
+keymaps in your plugin manager spec (see |rustmail-installation|): >lua
+  keys = {
+    { "<leader>rm", "<cmd>RustMail toggle<cr>", desc = "Toggle RustMail" },
+  }
+<
+Alternatively, set `toggle_keymap` in setup to register a keymap directly: >lua
+  require("rustmail").setup({ toggle_keymap = "<leader>rm" })
+<
+Note: `toggle_keymap` only takes effect after the plugin loads. With
+lazy.nvim's `cmd` or `keys` lazy-loading, prefer the `keys` spec approach.
 
 ==============================================================================
 7. API                                                         *rustmail-api*

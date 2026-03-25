@@ -3,7 +3,7 @@ if vim.g.loaded_rustmail then
 end
 vim.g.loaded_rustmail = true
 
-vim.api.nvim_create_user_command("Rustmail", function(cmd)
+vim.api.nvim_create_user_command("RustMail", function(cmd)
   local sub = cmd.fargs[1]
   local rustmail = require("rustmail")
 
@@ -23,5 +23,5 @@ end, {
   complete = function()
     return { "open", "close", "toggle", "stop" }
   end,
-  desc = "Rustmail email viewer",
+  desc = "RustMail email viewer",
 })

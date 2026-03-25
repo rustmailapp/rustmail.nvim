@@ -12,7 +12,7 @@ M.defaults = {
     height = 0.9,
     border = "rounded",
   },
-  toggle_keymap = "<leader>rm",
+  toggle_keymap = false,
 }
 
 M.options = vim.deepcopy(M.defaults)

@@ -53,9 +53,14 @@ describe("rustmail.config", function()
     assert.are.equal(original_port, config.defaults.port)
   end)
 
-  it("allows disabling toggle_keymap with false", function()
-    config.setup({ toggle_keymap = false })
+  it("defaults toggle_keymap to false", function()
+    config.setup({})
     assert.is_false(config.options.toggle_keymap)
+  end)
+
+  it("allows setting toggle_keymap to a string", function()
+    config.setup({ toggle_keymap = "<leader>rm" })
+    assert.are.equal("<leader>rm", config.options.toggle_keymap)
   end)
 end)
 

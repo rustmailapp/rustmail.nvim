@@ -23,7 +23,10 @@
 ```lua
 {
   "rustmailapp/rustmail.nvim",
-  cmd = "Rustmail",
+  cmd = "RustMail",
+  keys = {
+    { "<leader>rm", "<cmd>RustMail toggle<cr>", desc = "Toggle RustMail" },
+  },
   opts = {},
 }
 ```
@@ -54,7 +57,7 @@ require("rustmail").setup({
     height = 0.9,
     border = "rounded",
   },
-  toggle_keymap = "<leader>rm",
+  toggle_keymap = false,
 })
 ```
 
@@ -64,10 +67,10 @@ All options and their defaults: `:help rustmail-config`
 
 | Command              | Description                                |
 |----------------------|--------------------------------------------|
-| `:Rustmail`          | Open the TUI                               |
-| `:Rustmail toggle`   | Toggle the TUI window                      |
-| `:Rustmail close`    | Close the TUI window                       |
-| `:Rustmail stop`     | Stop the auto-started daemon               |
+| `:RustMail`          | Open the TUI                               |
+| `:RustMail toggle`   | Toggle the TUI window                      |
+| `:RustMail close`    | Close the TUI window                       |
+| `:RustMail stop`     | Stop the auto-started daemon               |
 
 ### Keymaps
 
