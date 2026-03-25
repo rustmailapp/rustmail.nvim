@@ -10,6 +10,10 @@
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg" alt="License"></a>
 </p>
 
+<p align="center">
+  <img src="screenshot.png" alt="rustmail.nvim — message list and detail view inside Neovim" width="700" />
+</p>
+
 ## Requirements
 
 - Neovim >= 0.10
