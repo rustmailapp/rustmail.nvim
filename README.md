@@ -87,7 +87,7 @@ Full keymap reference: `:help rustmail-keymaps`
 ## Documentation
 
 - In-editor: `:help rustmail`
-- Online: [rustmail docs](https://github.com/rustmailapp/rustmail/tree/master/docs)
+- Online: [rustmail docs](https://docs.rustmail.app/integrations/neovim)
 
 ## License
 
