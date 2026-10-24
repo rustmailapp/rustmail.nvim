@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Neovim client for <a href="https://github.com/rustmailapp/rustmail">RustMail</a> — browse captured emails without leaving your editor.
+  Neovim client for <a href="https://rustmail.app">RustMail</a>: browse captured emails without leaving your editor.
 </p>
 
 <p align="center">
